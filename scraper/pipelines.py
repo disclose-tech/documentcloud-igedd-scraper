@@ -272,7 +272,7 @@ class UploadPipeline:
             except Exception as e:
                 raise Exception("Upload error").with_traceback(e.__traceback__)
             else:
-                # Add to event_data
+                # No upload error, add to event_data
                 now = datetime.datetime.now().isoformat()
                 spider.event_data[item["source_file_url"]] = {
                     "headers": item["headers"],
@@ -284,3 +284,9 @@ class UploadPipeline:
                     spider.store_event_data(spider.event_data)
 
         return item
+
+    def close_spider(self, spider):
+        """Update event data when the spider closes."""
+
+        if not spider.dry_run and spider.run_id:
+            spider.store_event_data(spider.event_data)
