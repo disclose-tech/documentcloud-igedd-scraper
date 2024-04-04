@@ -213,7 +213,7 @@ class MailPipeline:
             [print_item(item) for item in self.items_ok]
         )
 
-        start_content = f"MRAE Scraper Addon Run {spider.run_id}"
+        start_content = f"IGEDD Scraper Addon Run {spider.run_id}"
 
         content = "\n\n".join([start_content, errors_content, ok_content])
 
