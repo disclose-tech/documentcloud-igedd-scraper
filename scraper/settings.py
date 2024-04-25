@@ -114,7 +114,7 @@ HTTPCACHE_ENABLED = False
 HTTPCACHE_IGNORE_HTTP_CODES = [503]
 HTTPCACHE_EXPIRATION_SECS = 86400  # 1 day
 DEPTH_STATS_VERBOSE = False
-LOG_LEVEL = "ERROR"
+LOG_LEVEL = "INFO"
 FEEDS = {
     # "data.json": {"format": "json", "encoding": "utf8", "indent": 4, "overwrite": True},
     "data.csv": {"format": "csv", "encoding": "utf8", "overwrite": True},
