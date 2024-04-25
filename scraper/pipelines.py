@@ -4,6 +4,7 @@ import datetime
 import re
 import os
 from urllib.parse import urlparse
+import logging
 
 import dateparser
 
@@ -162,6 +163,101 @@ class UploadLimitPipeline:
             raise DropItem("Upload limit exceeded.")
 
 
+class HandleErrorsPipeline:
+    """Pass docs with errors to private"""
+
+    def process_item(self, item, spider):
+
+        if (
+            item["project"].lower() == "error"
+            or item["petitioner"].lower() == "error"
+            or item["decision_date_string"].lower() == "error"
+            or item["decision_date"].lower() == "error"
+            or "error" in item["title"].lower()
+        ):
+            item["error"] = True
+            item["access"] = "private"
+        else:
+            item["error"] = False
+            item["access"] = spider.access_level
+
+        return item
+
+
+class UploadPipeline:
+    """Upload document to DocumentCloud & store event data."""
+
+    def open_spider(self, spider):
+
+
+        if not spider.dry_run:
+            try:
+                spider.event_data = spider.load_event_data()
+                spider.logger.info(
+                    f"Loaded event data ({len(spider.event_data)} documents)"
+                )
+            except Exception as e:
+                raise Exception("Error loading event data").with_traceback(
+                    e.__traceback__
+                )
+                sys.exit(1)
+        else:
+            spider.event_data = None
+
+        if spider.event_data is None:
+            spider.event_data = {}
+
+    def process_item(self, item, spider):
+
+        if not spider.dry_run:
+            try:
+                spider.client.documents.upload(
+                    item["source_file_url"],
+                    project=spider.target_project,
+                    title=item["title"],
+                    description=item["project"],
+                    source="www.igedd.developpement-durable.gouv.fr",
+                    language="fra",
+                    access=item["access"],
+                    data={
+                        "category": item["category"],
+                        "category_local": item["category_local"],
+                        "source_import": "IGEDD Scraper",
+                        "source_file_url": item["source_file_url"],
+                        "source_filename": item["source_filename"],
+                        "source_page_url": item["source_page_url"],
+                        "publication_date": item["publication_date"],
+                        "publication_time": item["publication_time"],
+                        "publication_datetime": item["publication_datetime"],
+                        "decision_date": item["decision_date"],
+                        "petitioner": item["petitioner"],
+                    },
+                )
+            except Exception as e:
+                raise Exception("Upload error").with_traceback(e.__traceback__)
+
+            else:  # No upload error, add to event_data
+                now = datetime.datetime.now().isoformat()
+                spider.event_data[item["source_file_url"]] = {
+                    "headers": item["headers"],
+                    "last_seen": now,
+                    # "run_id": spider.run_id,
+                }
+                if spider.run_id:  # only from the web interface
+                    spider.store_event_data(spider.event_data)
+
+        return item
+
+    def close_spider(self, spider):
+        """Update event data when the spider closes."""
+
+        if not spider.dry_run and spider.run_id:
+            spider.store_event_data(spider.event_data)
+            spider.logger.info(
+                f"Uploaded event data ({len(spider.event_data)} documents)"
+            )
+
+
 class MailPipeline:
     """Send scraping run report."""
 
@@ -219,74 +315,3 @@ class MailPipeline:
 
         if not spider.dry_run:
             spider.send_mail(subject, content)
-
-
-class HandleErrorsPipeline:
-    """Pass docs with errors to private"""
-
-    def process_item(self, item, spider):
-
-        if (
-            item["project"] == "Error"
-            or item["petitioner"] == "Error"
-            or item["decision_date_string"] == "ERROR"
-            or item["decision_date"] == "ERROR"
-            or "ERROR" in item["title"]
-        ):
-            item["access"] = "private"
-        else:
-            item["access"] = spider.access_level
-
-        return item
-
-
-class UploadPipeline:
-    """Upload document to DocumentCloud & store event data."""
-
-    def process_item(self, item, spider):
-
-        if not spider.dry_run:
-            try:
-                spider.client.documents.upload(
-                    item["source_file_url"],
-                    project=spider.target_project,
-                    title=item["title"],
-                    description=item["project"],
-                    source="www.igedd.developpement-durable.gouv.fr",
-                    language="fra",
-                    access=item["access"],
-                    data={
-                        "category": item["category"],
-                        "category_local": item["category_local"],
-                        "source_import": "IGEDD Scraper",
-                        "source_file_url": item["source_file_url"],
-                        "source_filename": item["source_filename"],
-                        "source_page_url": item["source_page_url"],
-                        "publication_date": item["publication_date"],
-                        "publication_time": item["publication_time"],
-                        "publication_datetime": item["publication_datetime"],
-                        "decision_date": item["decision_date"],
-                        "petitioner": item["petitioner"],
-                    },
-                )
-            except Exception as e:
-                raise Exception("Upload error").with_traceback(e.__traceback__)
-            else:
-                # No upload error, add to event_data
-                now = datetime.datetime.now().isoformat()
-                spider.event_data[item["source_file_url"]] = {
-                    "headers": item["headers"],
-                    "last_seen": now,
-                    "run_id": spider.run_id,
-                }
-                # Save event data ?
-                if spider.run_id:  # only from the web interface
-                    spider.store_event_data(spider.event_data)
-
-        return item
-
-    def close_spider(self, spider):
-        """Update event data when the spider closes."""
-
-        if not spider.dry_run and spider.run_id:
-            spider.store_event_data(spider.event_data)

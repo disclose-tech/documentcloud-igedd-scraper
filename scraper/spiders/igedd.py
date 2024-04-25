@@ -221,13 +221,13 @@ class IGEDDSpider(scrapy.Spider):
                         )
 
                     # TODO: Check year ??
-
-                    yield response.follow(
-                        doc_link,
-                        method="HEAD",
-                        callback=self.parse_document_headers,
-                        cb_kwargs=dict(doc_item=doc_item),
-                    )
+                    if not doc_item["source_file_url"] in self.event_data:
+                        yield response.follow(
+                            doc_link,
+                            method="HEAD",
+                            callback=self.parse_document_headers,
+                            cb_kwargs=dict(doc_item=doc_item),
+                        )
 
         elif category_local.startswith("Décisions de cas par cas"):
 
@@ -295,13 +295,17 @@ class IGEDDSpider(scrapy.Spider):
                                 decision_date_string=decision_date,
                                 source_file_url=response.urljoin(decision_file_url),
                             )
-                            yield response.follow(
-                                decision_file_url,
-                                callback=self.parse_document_headers,
-                                cb_kwargs=dict(
-                                    doc_item=decision_doc_item,
-                                ),
-                            )
+                            if (
+                                not decision_doc_item["source_file_url"]
+                                in self.event_data
+                            ):
+                                yield response.follow(
+                                    decision_file_url,
+                                    callback=self.parse_document_headers,
+                                    cb_kwargs=dict(
+                                        doc_item=decision_doc_item,
+                                    ),
+                                )
 
                         # formulaire_url
                         formulaire_link = encadre.css("a.spip_out")
@@ -318,14 +322,17 @@ class IGEDDSpider(scrapy.Spider):
                                 decision_date_string=decision_date,
                                 source_file_url=response.urljoin(formulaire_file_url),
                             )
-
-                            yield response.follow(
-                                decision_file_url,
-                                callback=self.parse_document_headers,
-                                cb_kwargs=dict(
-                                    doc_item=formulaire_doc_item,
-                                ),
-                            )
+                            if (
+                                not formulaire_doc_item["source_file_url"]
+                                in self.event_data
+                            ):
+                                yield response.follow(
+                                    decision_file_url,
+                                    callback=self.parse_document_headers,
+                                    cb_kwargs=dict(
+                                        doc_item=formulaire_doc_item,
+                                    ),
+                                )
 
         # else:
         #     print("did not handle category:" + category_local)
