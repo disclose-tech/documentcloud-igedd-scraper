@@ -36,7 +36,7 @@ class ParseDatePipeline:
 
         # Decision date
 
-        if not item["decision_date_string"] == "ERROR":
+        if not item["decision_date_string"].lower() == "error":
             decision_dt = dateparser.parse(
                 item["decision_date_string"], languages=["fr"]
             )
@@ -97,6 +97,8 @@ class BeautifyPipeline:
         #             item["title"] = item["title"][0].capitalize() + item["title"][1:]
 
         # Project
+        item["project"] = item["project"].strip()
+
         remove_at_start = [
             "Absence de nécessité de réaliser une évaluation environnementale de la ",
             "Cadrage préalable du ",
@@ -267,12 +269,7 @@ class MailPipeline:
 
     def process_item(self, item, spider):
 
-        if (
-            item["project"] == "ERROR"
-            or item["petitioner"] == "ERROR"
-            or item["decision_date_string"] == "ERROR"
-            or item["decision_date"] == "ERROR"
-        ):
+        if item["error"] == True:
             self.items_with_error.append(item)
         else:
             self.items_ok.append(item)
