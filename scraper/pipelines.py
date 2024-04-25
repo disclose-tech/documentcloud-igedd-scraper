@@ -62,12 +62,6 @@ class CategoryPipeline:
         elif item["category_local"].startswith("Décisions de cas par cas"):
             item["category"] = "Cas par cas"
 
-        # elif item["category_local"] in [
-        #     "Avis rendus sur plans et programmes",
-        #     "Avis rendus sur projets",
-        # ]:
-        #     item["category"] = "Avis"
-
         return item
 
 
@@ -87,15 +81,6 @@ class BeautifyPipeline:
     def process_item(self, item, spider):
         """Beautify & harmonize project & title names."""
 
-        #         # Title
-        #         if item["title"].startswith("("):
-        #             item["title"] = item["title"][1:]
-
-        #         if item["title"].startswith("la demande"):
-        #             item["title"] = "Demande" + item["title"][10:]
-        #         elif item["title"].startswith("demande"):
-        #             item["title"] = item["title"][0].capitalize() + item["title"][1:]
-
         # Project
         item["project"] = item["project"].strip()
 
@@ -109,42 +94,6 @@ class BeautifyPipeline:
 
         item["project"] = item["project"].strip()
         item["project"] = item["project"][0].capitalize() + item["project"][1:]
-
-        #         if not item["project"] == "Error":
-        #             if item["project"].endswith("))"):
-        #                 item["project"] = item["project"][:-1]
-        #             if item["project"].startswith("("):
-        #                 item["project"] = item["project"].lstrip("(")
-        #             if "  " in item["project"]:
-        #                 item["project"] = item["project"].replace("  ", " ")
-
-        #         # Petitioner
-        #         item["petitioner"] = item["petitioner"].strip()
-
-        #         remove_at_start = ["la ", "le ", "l'", "d'", "l’", "d’", "M. le ", "M. le"]
-        #         for start in remove_at_start:
-        #             if item["petitioner"].startswith(start):
-        #                 item["petitioner"] = item["petitioner"][len(start) :]
-
-        #         item["petitioner"] = item["petitioner"].strip()
-        #         item["petitioner"] = item["petitioner"][0].capitalize() + item["petitioner"][1:]
-
-        #         if "et de la commune" in item["petitioner"]:
-        #             item["petitioner"] = item["petitioner"].replace(
-        #                 "et de la commune", "et commune"
-        #             )
-
-        #         delete_after = [" en application de", " après examen au cas par cas"]
-        #         for d in delete_after:
-        #             if d in item["petitioner"]:
-        #                 item["petitioner"] = item["petitioner"].split(d)[0]
-
-        #         if re.search("de[A-Z]", item["petitioner"]):
-        #             item["petitioner"] = re.sub(r"de([A-Z])", r"de \1", item["petitioner"])
-
-        #         item["petitioner"] = (
-        #             item["petitioner"].replace("( ", "(").replace("  ", " ").rstrip(".,")
-        #         )
 
         return item
 
@@ -191,6 +140,8 @@ class UploadPipeline:
 
     def open_spider(self, spider):
 
+        documentcloud_logger = logging.getLogger("documentcloud")
+        documentcloud_logger.setLevel(logging.WARNING)
 
         if not spider.dry_run:
             try:
