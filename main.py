@@ -92,14 +92,14 @@ class DiscloseIGEDDScraper(AddOn):
 
         if not self.dry_run:
             try:
-                self.project = self.get_project_id()  # commented for development
+                self.project = self.get_project_id()
             except Exception as e:
                 raise Exception("Project error").with_traceback(e.__traceback__)
                 sys.exit(1)
-                # TODO : check user has access to the project
+                # TODO : check user has access to the project?
 
             # Check if the user has upload permissions (verified account)
-            self.check_permissions()  # commented for development
+            self.check_permissions()
         else:
             self.project = ""
 

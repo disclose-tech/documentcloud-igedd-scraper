@@ -6,6 +6,9 @@ from scrapy.exceptions import CloseSpider
 
 from ..items import DocumentItem
 
+SOURCE_SCRAPER = "IGEDD Scraper"
+AUTHORITY = "IGEDD"
+
 
 class IGEDDSpider(scrapy.Spider):
     name = "IGEDD_spider"
@@ -36,6 +39,7 @@ class IGEDDSpider(scrapy.Spider):
 
                 title = link.css("::text").get()
                 if title == "Les saisines":
+
                     yield response.follow(
                         link.attrib["href"],
                         callback=self.parse_year_selection_page,
@@ -170,6 +174,9 @@ class IGEDDSpider(scrapy.Spider):
 
         # Main fuction
 
+        page_title = response.xpath("//title/text()").get()
+        self.logger.info(f"Parsing {category_local} ({page_title})")
+
         if category_local == "Avis rendus":
 
             content_elements = response.css(
@@ -210,14 +217,17 @@ class IGEDDSpider(scrapy.Spider):
                         doc_item = DocumentItem(
                             title=f"Avis {no_dossier}",
                             project=project,
+                            authority=AUTHORITY,
                             # region=region,
                             category_local=category_local,
                             source_file_url=response.urljoin(doc_link),
                             source_page_url=response.request.url,
                             full_info=full_info,
                             # decision_date_line=date,
-                            decision_date_string=decision_date_string,
-                            petitioner="",
+                            # decision_date_string=decision_date_string,
+                            # petitioner="",
+                            source_scraper=SOURCE_SCRAPER,
+                            year=self.target_year,
                         )
 
                     # TODO: Check year ??
@@ -288,12 +298,15 @@ class IGEDDSpider(scrapy.Spider):
                             decision_doc_item = DocumentItem(
                                 title=f"Décision {no_dossier}",
                                 category_local=category_local,
+                                authority=AUTHORITY,
                                 full_info=full_info,
                                 project=project,
-                                petitioner=petitioner,
+                                # petitioner=petitioner,
                                 source_page_url=response.request.url,
-                                decision_date_string=decision_date,
+                                # decision_date_string=decision_date,
                                 source_file_url=response.urljoin(decision_file_url),
+                                source_scraper=SOURCE_SCRAPER,
+                                year=self.target_year,
                             )
                             if (
                                 not decision_doc_item["source_file_url"]
@@ -315,12 +328,15 @@ class IGEDDSpider(scrapy.Spider):
                             formulaire_doc_item = DocumentItem(
                                 title=f"Formulaire {no_dossier}",
                                 category_local=category_local,
+                                authority=AUTHORITY,
                                 full_info=full_info,
                                 project=project,
-                                petitioner=petitioner,
+                                # petitioner=petitioner,
                                 source_page_url=response.request.url,
-                                decision_date_string=decision_date,
+                                # decision_date_string=decision_date,
                                 source_file_url=response.urljoin(formulaire_file_url),
+                                source_scraper=SOURCE_SCRAPER,
+                                year=self.target_year,
                             )
                             if (
                                 not formulaire_doc_item["source_file_url"]

@@ -36,15 +36,15 @@ class ParseDatePipeline:
 
         # Decision date
 
-        if not item["decision_date_string"].lower() == "error":
-            decision_dt = dateparser.parse(
-                item["decision_date_string"], languages=["fr"]
-            )
-            if decision_dt:
-                item["decision_date"] = decision_dt.strftime("%Y-%m-%d")
+        # if not item["decision_date_string"].lower() == "error":
+        #     decision_dt = dateparser.parse(
+        #         item["decision_date_string"], languages=["fr"]
+        #     )
+        #     if decision_dt:
+        #         item["decision_date"] = decision_dt.strftime("%Y-%m-%d")
 
-            else:
-                item["decision_date"] = "ERROR"
+        #     else:
+        #         item["decision_date"] = "ERROR"
 
         return item
 
@@ -121,9 +121,9 @@ class HandleErrorsPipeline:
 
         if (
             item["project"].lower() == "error"
-            or item["petitioner"].lower() == "error"
-            or item["decision_date_string"].lower() == "error"
-            or item["decision_date"].lower() == "error"
+            # or item["petitioner"].lower() == "error"
+            # or item["decision_date_string"].lower() == "error"
+            # or item["decision_date"].lower() == "error"
             or "error" in item["title"].lower()
         ):
             item["error"] = True
@@ -143,22 +143,24 @@ class UploadPipeline:
         documentcloud_logger = logging.getLogger("documentcloud")
         documentcloud_logger.setLevel(logging.WARNING)
 
-        if not spider.dry_run:
-            try:
-                spider.event_data = spider.load_event_data()
-                spider.logger.info(
-                    f"Loaded event data ({len(spider.event_data)} documents)"
-                )
-            except Exception as e:
-                raise Exception("Error loading event data").with_traceback(
-                    e.__traceback__
-                )
-                sys.exit(1)
-        else:
-            spider.event_data = None
+        if hasattr(spider, "dry_run"):
+            if not spider.dry_run:
+                try:
+                    spider.event_data = spider.load_event_data()
+                    spider.logger.info(
+                        f"Loaded event data ({len(spider.event_data)} documents)"
+                    )
+                except Exception as e:
+                    raise Exception("Error loading event data").with_traceback(
+                        e.__traceback__
+                    )
+                    sys.exit(1)
+            else:
+                spider.event_data = None
+                spider.logger.info(f"Event data not loaded (dry run)")
 
-        if spider.event_data is None:
-            spider.event_data = {}
+            if spider.event_data is None:
+                spider.event_data = {}
 
     def process_item(self, item, spider):
 
@@ -175,15 +177,17 @@ class UploadPipeline:
                     data={
                         "category": item["category"],
                         "category_local": item["category_local"],
-                        "source_import": "IGEDD Scraper",
+                        "source_scraper": item["source_scraper"],
                         "source_file_url": item["source_file_url"],
                         "source_filename": item["source_filename"],
                         "source_page_url": item["source_page_url"],
                         "publication_date": item["publication_date"],
                         "publication_time": item["publication_time"],
                         "publication_datetime": item["publication_datetime"],
-                        "decision_date": item["decision_date"],
-                        "petitioner": item["petitioner"],
+                        # "decision_date": item["decision_date"],
+                        # "petitioner": item["petitioner"],
+                        "authority": item["authority"],
+                        "year": item["year"],
                     },
                 )
             except Exception as e:
@@ -233,13 +237,13 @@ class MailPipeline:
             item_string = f"""
             title: {item["title"]}
             project: {item["project"]}
-            petitioner: {item["petitioner"]}
+            authority: {item["authority"]}
             category: {item["category"]}
             category_local: {item["category_local"]}
-            decision_date: {item["decision_date"]}
             publication_date: {item["publication_date"]}
             source_file_url: {item["source_file_url"]}
             source_page_url: {item["source_page_url"]}
+            year: {item["year"]}
             """
 
             if error:
