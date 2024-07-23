@@ -32,6 +32,7 @@ properties:
 categories: 
   - monitor
 eventOptions:
+  name: target_year
   events:
     - hourly
     - daily
