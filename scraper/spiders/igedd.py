@@ -13,7 +13,10 @@ AUTHORITY = "IGEDD"
 class IGEDDSpider(scrapy.Spider):
     name = "IGEDD_spider"
 
-    allowed_domains = ["www.igedd.developpement-durable.gouv.fr"]
+    allowed_domains = [
+        "www.igedd.developpement-durable.gouv.fr",
+        "webissimo.developpement-durable.gouv.fr",
+    ]
 
     start_urls = [
         "https://www.igedd.developpement-durable.gouv.fr/l-autorite-environnementale-r145.html"
@@ -43,7 +46,7 @@ class IGEDDSpider(scrapy.Spider):
                     yield response.follow(
                         link.attrib["href"],
                         callback=self.parse_year_selection_page,
-                        cb_kwargs=dict(category_local=title),
+                        cb_kwargs=dict(category_local="Saisines"),
                     )
 
             elif section.css(".rubrique_avec_sous-rubriques"):
@@ -54,12 +57,15 @@ class IGEDDSpider(scrapy.Spider):
                 if title == "Avis rendus":
 
                     current_year_subsec = subsections[0]
+                    current_year_subsec_title = current_year_subsec.css("::text").get()
                     current_year = int(current_year_subsec.css("::text").get())
 
                     archives_subsec = subsections[1]
 
-                    if current_year == self.target_year:
-                        # print("---> Target year matches current year")
+                    if current_year == int(self.target_year):
+                        self.logger.debug(
+                            f"Target {current_year_subsec_title} year matches current year"
+                        )
                         yield response.follow(
                             current_year_subsec.attrib["href"],
                             callback=self.parse_year_selection_page,
@@ -67,14 +73,14 @@ class IGEDDSpider(scrapy.Spider):
                         )
 
                     else:
-                        # print("---> Target year does NOT matches current year")
+                        self.logger.debug(
+                            f"Target {current_year_subsec_title} does NOT matches target year, following archives link"
+                        )
                         yield response.follow(
                             archives_subsec.attrib["href"],
                             callback=self.parse_year_selection_page,
                             cb_kwargs=dict(category_local="Avis rendus"),
                         )
-
-                        # print(link)
 
                 elif title == "Examen au cas par cas et autres décisions":
 
@@ -105,7 +111,7 @@ class IGEDDSpider(scrapy.Spider):
                     callback=self.parse_year_selection_page,
                     cb_kwargs=dict(category_local=category_local),
                 )
-            elif "ARCHIVES" in link_text:
+            elif "archives" in link_text.lower():
                 archive_link = opt
 
         if not year_link_found:  # Following archive link
@@ -139,16 +145,22 @@ class IGEDDSpider(scrapy.Spider):
 
                 if year_match:
                     if int(year_match.group()) == self.target_year:
-                        print(f" -> {category_local}: following {link_text}")
-                        response.follow(
+                        self.logger.debug(
+                            f"{category_local}, {self.target_year}: matched '{link_text}'"
+                        )
+                        yield response.follow(
                             link.attrib["href"],
                             callback=self.parse_documents_page,
                             cb_kwargs=dict(category_local=category_local),
                         )
+                    else:
+                        self.logger.debug(
+                            f"{year_match.group()} not equal to target year ({self.target_year}, type {type(self.target_year)} "
+                        )
 
     def parse_documents_page(self, response, category_local):
 
-        # Avis rendus (ok): https://www.igedd.developpement-durable.gouv.fr/2024-r708.html?lang=fr
+        # Avis rendus: https://www.igedd.developpement-durable.gouv.fr/2024-r708.html?lang=fr
         # Décisions de cas par cas sur des plans-programmes: https://www.igedd.developpement-durable.gouv.fr/2024-en-cours-d-examen-et-decisions-rendues-r750.html?lang=fr
         # Décisions de cas par cas sur des projets: https://www.igedd.developpement-durable.gouv.fr/2024-en-cours-d-examen-et-decisions-rendues-r755.html?lang=fr
         # Les saisines: https://www.igedd.developpement-durable.gouv.fr/les-saisines-de-l-autorite-environnementale-du-a417.html?lang=fr
@@ -158,7 +170,7 @@ class IGEDDSpider(scrapy.Spider):
 
             if category_local == "Avis rendus":
                 match_no_dossier = re.search(
-                    r"(?:N°dossier Ae\xa0: |N°\xa0)(.*)\n", full_info, re.IGNORECASE
+                    r"(?:N°dossier Ae\xa0: |N°\xa0|N°)(.*)\n", full_info, re.IGNORECASE
                 )
             elif category_local.startswith("Décisions de cas par cas"):
                 match_no_dossier = re.search(
@@ -166,7 +178,7 @@ class IGEDDSpider(scrapy.Spider):
                 )
 
             if match_no_dossier:
-                no_dossier = match_no_dossier.group(1)
+                no_dossier = match_no_dossier.group(1).strip()
             else:
                 no_dossier = "ERROR"
 
@@ -174,8 +186,9 @@ class IGEDDSpider(scrapy.Spider):
 
         # Main fuction
 
-        page_title = response.xpath("//title/text()").get()
-        self.logger.info(f"Parsing {category_local} ({page_title})")
+        page_title = response.xpath("//title/text()").get().replace(" |  IGEDD", "")
+
+        self.logger.info(f'Parsing page "{page_title}"')
 
         if category_local == "Avis rendus":
 
@@ -188,8 +201,7 @@ class IGEDDSpider(scrapy.Spider):
 
                     decision_date_string = decision_date_line.replace("Séance du ", "")
 
-                    # Extract date from the title "Séance du"
-                    # date =
+                    # Extract date from the title "Séance du"... TODO if needed
 
                 elif elem.css(".texteencadre-spip"):
 
@@ -212,32 +224,32 @@ class IGEDDSpider(scrapy.Spider):
 
                         no_dossier = parse_no_dossier(full_info, category_local)
 
+                        if "cadrage préalable" in project.lower():
+                            title = f"Cadrage préalable {no_dossier}"
+                        else:
+                            title = f"Avis {no_dossier}"
+
                         doc_link = encadre.css("a.fr-download__link").attrib["href"]
 
                         doc_item = DocumentItem(
-                            title=f"Avis {no_dossier}",
+                            title=title,
                             project=project,
                             authority=AUTHORITY,
-                            # region=region,
                             category_local=category_local,
                             source_file_url=response.urljoin(doc_link),
                             source_page_url=response.request.url,
                             full_info=full_info,
-                            # decision_date_line=date,
-                            # decision_date_string=decision_date_string,
-                            # petitioner="",
                             source_scraper=SOURCE_SCRAPER,
                             year=self.target_year,
                         )
 
-                    # TODO: Check year ??
-                    if not doc_item["source_file_url"] in self.event_data:
-                        yield response.follow(
-                            doc_link,
-                            method="HEAD",
-                            callback=self.parse_document_headers,
-                            cb_kwargs=dict(doc_item=doc_item),
-                        )
+                        if not doc_item["source_file_url"] in self.event_data:
+                            yield response.follow(
+                                doc_item["source_file_url"],
+                                method="HEAD",
+                                callback=self.parse_document_headers,
+                                cb_kwargs=dict(doc_item=doc_item),
+                            )
 
         elif category_local.startswith("Décisions de cas par cas"):
 
@@ -245,11 +257,11 @@ class IGEDDSpider(scrapy.Spider):
                 "#contenu .contenu-article .texte-article > *"
             )
 
-            # print(str(len(content_elements)) + " " + response.request.url)
-
             section = "?"
             for elem in content_elements:
-                if elem.css("h2"):
+                if elem.css(
+                    "h2"
+                ):  # Used to detect pending/taken decisions, not used for now
                     h2_text = elem.css("h2::text").get()
 
                     if "en cours" in h2_text:
@@ -260,7 +272,7 @@ class IGEDDSpider(scrapy.Spider):
 
                 elif elem.css(".texteencadre-spip"):
 
-                    if section == "décisions prises":
+                    if section in ["en cours", "décisions prises"]:
 
                         encadre = elem.css(".texteencadre-spip")
 
@@ -269,89 +281,155 @@ class IGEDDSpider(scrapy.Spider):
                         no_dossier = parse_no_dossier(full_info, category_local)
 
                         # Petitioner
-                        match_petitioner = re.search(
-                            "Pétitionnaire ou maître d’ouvrage\xa0: ?(.*)\n", full_info
-                        )
-                        if match_petitioner:
-                            petitioner = match_petitioner.group(1).strip()
-                        else:
-                            petitioner = "ERROR"
+                        # match_petitioner = re.search(
+                        #     "Pétitionnaire ou maître d’ouvrage\xa0: ?(.*)\n", full_info
+                        # )
+                        # if match_petitioner:
+                        #     petitioner = match_petitioner.group(1).strip()
+                        # else:
+                        #     petitioner = "ERROR"
 
                         # Project
-                        project = encadre.css("a.spip_out::text").get().strip()
+                        project_link = encadre.css("a.spip_out::text")
+
+                        if project_link:
+                            project = project_link.get().strip()
+                        else:
+
+                            project_match = re.search(
+                                "Nom et formulaire du dossier : (.*)\n", full_info
+                            )
+
+                            if project_match:
+                                project = project_match.group(1).strip()
+
+                            else:
+                                project = "ERROR"
 
                         # decision_date
-                        match_decision_date = re.search(
-                            r"Décision du (.*) \(\*\)", full_info
+                        # match_decision_date = re.search(
+                        #     r"Décision du (.*) \(\*\)", full_info
+                        # )
+                        # if match_decision_date:
+                        #     decision_date = match_decision_date.group(1).strip()
+                        # else:
+                        #     decision_date = "ERROR"
+
+                        # links in boxes (avis, recours, lettres, etc)
+                        box_links = encadre.css("a.fr-download__link")
+
+                        for link in box_links:
+
+                            link_url = link.attrib["href"]
+                            link_text = link.css("::text").get().strip()
+
+                            if link_text in ["OUI", "NON"]:
+                                title = f"Décision {no_dossier}"
+                            else:
+                                title = link_text.strip()
+
+                            doc_item = DocumentItem(
+                                title=title,
+                                category_local=category_local,
+                                authority=AUTHORITY,
+                                full_info=full_info,
+                                project=project,
+                                source_page_url=response.request.url,
+                                source_file_url=response.urljoin(link_url),
+                                source_scraper=SOURCE_SCRAPER,
+                                year=self.target_year,
+                            )
+
+                            if not doc_item["source_file_url"] in self.event_data:
+                                yield response.follow(
+                                    doc_item["source_file_url"],
+                                    method="HEAD",
+                                    callback=self.parse_document_headers,
+                                    cb_kwargs=dict(doc_item=doc_item),
+                                )
+
+                        # simple links (formulaire, recours)
+                        simple_links = encadre.css("a.spip_out")
+                        if simple_links:
+
+                            for index, link in enumerate(simple_links):
+
+                                file_url = link.attrib["href"]
+
+                                if index == 0:
+                                    title = f"Formulaire {no_dossier}"
+                                else:
+                                    title = link.css("::text").get().strip()
+
+                                doc_item = DocumentItem(
+                                    title=title,
+                                    category_local=category_local,
+                                    authority=AUTHORITY,
+                                    full_info=full_info,
+                                    project=project,
+                                    source_page_url=response.request.url,
+                                    source_file_url=response.urljoin(file_url),
+                                    source_scraper=SOURCE_SCRAPER,
+                                    year=self.target_year,
+                                )
+
+                                if not doc_item["source_file_url"] in self.event_data:
+                                    yield response.follow(
+                                        doc_item["source_file_url"],
+                                        method="HEAD",
+                                        callback=self.parse_document_headers,
+                                        cb_kwargs=dict(doc_item=doc_item),
+                                    )
+
+        elif category_local == "Saisines":
+
+            download_boxes = response.css("#main .texte-article .fr-download")
+
+            for dl_box in download_boxes:
+
+                doc_title = "".join(
+                    [
+                        x.strip()
+                        for x in dl_box.css("a.fr-download__link::text").getall()
+                        if x.strip()
+                    ]
+                )
+                doc_link = dl_box.css("a.fr-download__link").attrib["href"]
+
+                preceding_p = dl_box.xpath("./preceding-sibling::p")[-1]
+
+                project = preceding_p.css("strong").css("::text").get()
+
+                date_string = preceding_p.css("::text")[1].get()
+
+                year_match = re.search("20\d\d", date_string)
+
+                year = int(year_match.group())
+
+                if year == int(self.target_year):
+
+                    doc_item = DocumentItem(
+                        title=f"Accusé de reception - {doc_title}",
+                        project=project,
+                        authority=AUTHORITY,
+                        category_local=category_local,
+                        source_file_url=response.urljoin(doc_link),
+                        source_page_url=response.request.url,
+                        source_scraper=SOURCE_SCRAPER,
+                        year=self.target_year,
+                    )
+
+                    if not doc_item["source_file_url"] in self.event_data:
+                        yield response.follow(
+                            doc_item["source_file_url"],
+                            method="HEAD",
+                            callback=self.parse_document_headers,
+                            cb_kwargs=dict(doc_item=doc_item),
                         )
-                        if match_decision_date:
-                            decision_date = match_decision_date.group(1).strip()
-                        else:
-                            decision_date = "ERROR"
-
-                        # decision_url
-                        decision_link = encadre.css("a.fr-download__link")
-
-                        if decision_link:
-
-                            decision_file_url = decision_link.attrib["href"]
-                            decision_doc_item = DocumentItem(
-                                title=f"Décision {no_dossier}",
-                                category_local=category_local,
-                                authority=AUTHORITY,
-                                full_info=full_info,
-                                project=project,
-                                # petitioner=petitioner,
-                                source_page_url=response.request.url,
-                                # decision_date_string=decision_date,
-                                source_file_url=response.urljoin(decision_file_url),
-                                source_scraper=SOURCE_SCRAPER,
-                                year=self.target_year,
-                            )
-                            if (
-                                not decision_doc_item["source_file_url"]
-                                in self.event_data
-                            ):
-                                yield response.follow(
-                                    decision_file_url,
-                                    callback=self.parse_document_headers,
-                                    cb_kwargs=dict(
-                                        doc_item=decision_doc_item,
-                                    ),
-                                )
-
-                        # formulaire_url
-                        formulaire_link = encadre.css("a.spip_out")
-                        if formulaire_link:
-                            formulaire_file_url = formulaire_link.attrib["href"]
-
-                            formulaire_doc_item = DocumentItem(
-                                title=f"Formulaire {no_dossier}",
-                                category_local=category_local,
-                                authority=AUTHORITY,
-                                full_info=full_info,
-                                project=project,
-                                # petitioner=petitioner,
-                                source_page_url=response.request.url,
-                                # decision_date_string=decision_date,
-                                source_file_url=response.urljoin(formulaire_file_url),
-                                source_scraper=SOURCE_SCRAPER,
-                                year=self.target_year,
-                            )
-                            if (
-                                not formulaire_doc_item["source_file_url"]
-                                in self.event_data
-                            ):
-                                yield response.follow(
-                                    decision_file_url,
-                                    callback=self.parse_document_headers,
-                                    cb_kwargs=dict(
-                                        doc_item=formulaire_doc_item,
-                                    ),
-                                )
-
-        # else:
-        #     print("did not handle category:" + category_local)
+                else:
+                    self.logger.debug(
+                        f"Skipped {doc_title}, not matching target_year {self.target_year}"
+                    )
 
     def parse_document_headers(self, response, doc_item):  # à relire
         """Gets the headers of a document to extract its publication date (Last-Modified header)."""
