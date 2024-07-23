@@ -56,7 +56,10 @@ class CategoryPipeline:
 
     def process_item(self, item, spider):
         if item["category_local"] == "Avis rendus":
-            if "cadrage préalable" in item["project"].lower():
+            if (
+                "cadrage préalable" in item["project"].lower()
+                or "cadrage prealable" in item["project"].lower()
+            ):
                 item["category"] = "Cadrage"
             else:
                 item["category"] = "Avis"
@@ -202,16 +205,17 @@ class UploadPipeline:
                     language="fra",
                     access=item["access"],
                     data={
+                        "authority": item["authority"],
                         "category": item["category"],
                         "category_local": item["category_local"],
+                        "event_data_key": item["source_file_url"],
+                        "publication_date": item["publication_date"],
+                        "publication_time": item["publication_time"],
+                        "publication_datetime": item["publication_datetime"],
                         "source_scraper": item["source_scraper"],
                         "source_file_url": item["source_file_url"],
                         "source_filename": item["source_filename"],
                         "source_page_url": item["source_page_url"],
-                        "publication_date": item["publication_date"],
-                        "publication_time": item["publication_time"],
-                        "publication_datetime": item["publication_datetime"],
-                        "authority": item["authority"],
                         "year": item["year"],
                     },
                 )
