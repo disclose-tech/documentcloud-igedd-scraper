@@ -62,6 +62,9 @@ class CategoryPipeline:
         elif item["category_local"].startswith("Décisions de cas par cas"):
             item["category"] = "Cas par cas"
 
+        elif item["category_local"] == "Saisines":
+            item["category"] = "Avis"
+
         return item
 
 
@@ -83,16 +86,18 @@ class BeautifyPipeline:
 
         # Project
         item["project"] = item["project"].strip()
+        item["project"] = item["project"].replace(" ", " ").replace("’", "'")
+        item["project"] = item["project"].rstrip(".,")
 
-        remove_at_start = [
-            "Absence de nécessité de réaliser une évaluation environnementale de la ",
-            "Cadrage préalable du ",
-        ]
-        for start in remove_at_start:
-            if item["project"].startswith(start):
-                item["project"] = item["project"][len(start) :]
+        # remove_at_start = [
+        #     "Absence de nécessité de réaliser une évaluation environnementale de la ",
+        #     # "Cadrage préalable du ",
+        # ]
+        # for start in remove_at_start:
+        #     if item["project"].startswith(start):
+        #         item["project"] = item["project"][len(start) :]
 
-        item["project"] = item["project"].strip()
+        # item["project"] = item["project"].strip()
         item["project"] = item["project"][0].capitalize() + item["project"][1:]
 
         return item
@@ -147,9 +152,7 @@ class UploadPipeline:
             if not spider.dry_run:
                 try:
                     spider.event_data = spider.load_event_data()
-                    spider.logger.info(
-                        f"Loaded event data ({len(spider.event_data)} documents)"
-                    )
+
                 except Exception as e:
                     raise Exception("Error loading event data").with_traceback(
                         e.__traceback__
@@ -157,10 +160,16 @@ class UploadPipeline:
                     sys.exit(1)
             else:
                 spider.event_data = None
-                spider.logger.info(f"Event data not loaded (dry run)")
 
             if spider.event_data is None:
                 spider.event_data = {}
+
+            if spider.dry_run:
+                spider.logger.info(f"Event data not loaded (dry run)")
+            else:
+                spider.logger.info(
+                    f"Loaded event data ({len(spider.event_data)} documents)"
+                )
 
     def process_item(self, item, spider):
 
@@ -184,8 +193,6 @@ class UploadPipeline:
                         "publication_date": item["publication_date"],
                         "publication_time": item["publication_time"],
                         "publication_datetime": item["publication_datetime"],
-                        # "decision_date": item["decision_date"],
-                        # "petitioner": item["petitioner"],
                         "authority": item["authority"],
                         "year": item["year"],
                     },
@@ -196,7 +203,7 @@ class UploadPipeline:
             else:  # No upload error, add to event_data
                 now = datetime.datetime.now().isoformat()
                 spider.event_data[item["source_file_url"]] = {
-                    "headers": item["headers"],
+                    "last_modified": item["publication_lastmodified"],
                     "last_seen": now,
                     # "run_id": spider.run_id,
                 }
