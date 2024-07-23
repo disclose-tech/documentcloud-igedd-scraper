@@ -216,7 +216,7 @@ class UploadPipeline:
                         "source_file_url": item["source_file_url"],
                         "source_filename": item["source_filename"],
                         "source_page_url": item["source_page_url"],
-                        "year": item["year"],
+                        "year": str(item["year"]),
                     },
                 )
             except Exception as e:
