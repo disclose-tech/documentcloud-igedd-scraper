@@ -12,6 +12,8 @@ from itemadapter import ItemAdapter
 
 from scrapy.exceptions import DropItem
 
+from .corrections import corrections
+
 
 class ParseDatePipeline:
     """Parse dates from scraped data."""
@@ -117,6 +119,22 @@ class UploadLimitPipeline:
         else:
             spider.upload_limit_attained = True
             raise DropItem("Upload limit exceeded.")
+
+
+class CorrectionsPipeline:
+    """Manually correct problematic documents listed in corrections.py"""
+
+    def process_item(self, item, spider):
+
+        url = item["source_file_url"]
+        if url in corrections:
+            # print(f"Found a correction to do for {url}")
+
+            for k, v in corrections[url].items():
+                # print(f"replacing {k} with value {v}")
+                item[k] = v
+
+        return item
 
 
 class HandleErrorsPipeline:
