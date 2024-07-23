@@ -272,61 +272,82 @@ class IGEDDSpider(scrapy.Spider):
 
                 elif elem.css(".texteencadre-spip"):
 
-                    if section in ["en cours", "décisions prises"]:
+                    encadre = elem.css(".texteencadre-spip")
 
-                        encadre = elem.css(".texteencadre-spip")
+                    full_info = "".join(encadre.css("::text").getall())
 
-                        full_info = "".join(encadre.css("::text").getall())
+                    no_dossier = parse_no_dossier(full_info, category_local)
 
-                        no_dossier = parse_no_dossier(full_info, category_local)
+                    # Petitioner
+                    # match_petitioner = re.search(
+                    #     "Pétitionnaire ou maître d’ouvrage\xa0: ?(.*)\n", full_info
+                    # )
+                    # if match_petitioner:
+                    #     petitioner = match_petitioner.group(1).strip()
+                    # else:
+                    #     petitioner = "ERROR"
 
-                        # Petitioner
-                        # match_petitioner = re.search(
-                        #     "Pétitionnaire ou maître d’ouvrage\xa0: ?(.*)\n", full_info
-                        # )
-                        # if match_petitioner:
-                        #     petitioner = match_petitioner.group(1).strip()
-                        # else:
-                        #     petitioner = "ERROR"
-
-                        # Project
-                        project_link = encadre.css("a.spip_out::text")
-
-                        if project_link:
-                            project = project_link.get().strip()
+                    # Project
+                    project_link = encadre.css("a.spip_out::text")
+                    if project_link:
+                        project = project_link.get().strip()
+                    else:
+                        project_match = re.search(
+                            "Nom et formulaire du dossier : (.*)\n", full_info
+                        )
+                        if project_match:
+                            project = project_match.group(1).strip()
                         else:
+                            project = "ERROR"
 
-                            project_match = re.search(
-                                "Nom et formulaire du dossier : (.*)\n", full_info
+                    # decision_date
+                    # match_decision_date = re.search(
+                    #     r"Décision du (.*) \(\*\)", full_info
+                    # )
+                    # if match_decision_date:
+                    #     decision_date = match_decision_date.group(1).strip()
+                    # else:
+                    #     decision_date = "ERROR"
+
+                    # links in boxes (avis, recours, lettres, etc)
+                    box_links = encadre.css("a.fr-download__link")
+                    for link in box_links:
+                        link_url = link.attrib["href"]
+                        link_text = link.css("::text").get().strip()
+                        if link_text in ["OUI", "NON"]:
+                            title = f"Décision {no_dossier}"
+                        else:
+                            title = link_text.strip()
+
+                        doc_item = DocumentItem(
+                            title=title,
+                            category_local=category_local,
+                            authority=AUTHORITY,
+                            full_info=full_info,
+                            project=project,
+                            source_page_url=response.request.url,
+                            source_file_url=response.urljoin(link_url),
+                            source_scraper=SOURCE_SCRAPER,
+                            year=self.target_year,
+                        )
+
+                        if not doc_item["source_file_url"] in self.event_data:
+                            yield response.follow(
+                                doc_item["source_file_url"],
+                                method="HEAD",
+                                callback=self.parse_document_headers,
+                                cb_kwargs=dict(doc_item=doc_item),
                             )
 
-                            if project_match:
-                                project = project_match.group(1).strip()
-
+                    # simple links (formulaire, recours)
+                    simple_links = encadre.css("a.spip_out")
+                    if simple_links:
+                        for index, link in enumerate(simple_links):
+                            file_url = link.attrib["href"]
+                            if index == 0:
+                                title = f"Formulaire {no_dossier}"
                             else:
-                                project = "ERROR"
-
-                        # decision_date
-                        # match_decision_date = re.search(
-                        #     r"Décision du (.*) \(\*\)", full_info
-                        # )
-                        # if match_decision_date:
-                        #     decision_date = match_decision_date.group(1).strip()
-                        # else:
-                        #     decision_date = "ERROR"
-
-                        # links in boxes (avis, recours, lettres, etc)
-                        box_links = encadre.css("a.fr-download__link")
-
-                        for link in box_links:
-
-                            link_url = link.attrib["href"]
-                            link_text = link.css("::text").get().strip()
-
-                            if link_text in ["OUI", "NON"]:
-                                title = f"Décision {no_dossier}"
-                            else:
-                                title = link_text.strip()
+                                title = link.css("::text").get().strip()
 
                             doc_item = DocumentItem(
                                 title=title,
@@ -335,7 +356,7 @@ class IGEDDSpider(scrapy.Spider):
                                 full_info=full_info,
                                 project=project,
                                 source_page_url=response.request.url,
-                                source_file_url=response.urljoin(link_url),
+                                source_file_url=response.urljoin(file_url),
                                 source_scraper=SOURCE_SCRAPER,
                                 year=self.target_year,
                             )
@@ -347,39 +368,6 @@ class IGEDDSpider(scrapy.Spider):
                                     callback=self.parse_document_headers,
                                     cb_kwargs=dict(doc_item=doc_item),
                                 )
-
-                        # simple links (formulaire, recours)
-                        simple_links = encadre.css("a.spip_out")
-                        if simple_links:
-
-                            for index, link in enumerate(simple_links):
-
-                                file_url = link.attrib["href"]
-
-                                if index == 0:
-                                    title = f"Formulaire {no_dossier}"
-                                else:
-                                    title = link.css("::text").get().strip()
-
-                                doc_item = DocumentItem(
-                                    title=title,
-                                    category_local=category_local,
-                                    authority=AUTHORITY,
-                                    full_info=full_info,
-                                    project=project,
-                                    source_page_url=response.request.url,
-                                    source_file_url=response.urljoin(file_url),
-                                    source_scraper=SOURCE_SCRAPER,
-                                    year=self.target_year,
-                                )
-
-                                if not doc_item["source_file_url"] in self.event_data:
-                                    yield response.follow(
-                                        doc_item["source_file_url"],
-                                        method="HEAD",
-                                        callback=self.parse_document_headers,
-                                        cb_kwargs=dict(doc_item=doc_item),
-                                    )
 
         elif category_local == "Saisines":
 
