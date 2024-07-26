@@ -174,7 +174,7 @@ class IGEDDSpider(scrapy.Spider):
                 )
             elif category_local.startswith("Décisions de cas par cas"):
                 match_no_dossier = re.search(
-                    r"N° Ae-CERFA : (.*)\n", full_info, re.IGNORECASE
+                    r"N° Ae-CERFA :(.*)\n", full_info, re.IGNORECASE
                 )
 
             if match_no_dossier:
