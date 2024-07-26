@@ -154,6 +154,10 @@ class HandleErrorsPipeline:
         ):
             item["error"] = True
             item["access"] = "private"
+            spider.logger.warn(
+                f"Document with error: {item['title']} on {item['source_page_url']}"
+            )
+            print(item)
         else:
             item["error"] = False
             item["access"] = spider.access_level
