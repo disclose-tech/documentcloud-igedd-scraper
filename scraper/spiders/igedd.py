@@ -388,7 +388,7 @@ class IGEDDSpider(scrapy.Spider):
 
                 project = preceding_p.css("strong").css("::text").get()
 
-                date_string = preceding_p.css("::text")[1].get()
+                date_string = preceding_p.css("::text")[-1].get()
 
                 year_match = re.search("20\d\d", date_string)
 
