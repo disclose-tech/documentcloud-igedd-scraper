@@ -16,6 +16,7 @@ class IGEDDSpider(scrapy.Spider):
     allowed_domains = [
         "www.igedd.developpement-durable.gouv.fr",
         "webissimo.developpement-durable.gouv.fr",
+        "webissimo-inter.e2.rie.gouv.fr",
     ]
 
     start_urls = [
