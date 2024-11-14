@@ -90,6 +90,8 @@ class DiscloseIGEDDScraper(AddOn):
 
         self.upload_limit = self.data.get("upload_limit", 0)
 
+        self.upload_event_data = self.data.get("upload_event_data")
+
         self.dry_run = self.data.get("dry_run")
 
         if not self.dry_run:
@@ -127,6 +129,7 @@ class DiscloseIGEDDScraper(AddOn):
             send_mail=self.send_mail,
             load_event_data=self.load_event_data,
             store_event_data=self.store_event_data,
+            upload_event_data=self.upload_event_data,
         )
 
         # Run
