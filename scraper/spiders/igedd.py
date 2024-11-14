@@ -6,7 +6,6 @@ from scrapy.exceptions import CloseSpider
 
 from ..items import DocumentItem
 
-SOURCE_SCRAPER = "IGEDD Scraper"
 AUTHORITY = "IGEDD"
 
 
@@ -266,7 +265,6 @@ class IGEDDSpider(scrapy.Spider):
                             source_file_url=response.urljoin(doc_link),
                             source_page_url=response.request.url,
                             full_info=full_info,
-                            source_scraper=SOURCE_SCRAPER,
                             year=self.target_year,
                         )
 
@@ -354,7 +352,6 @@ class IGEDDSpider(scrapy.Spider):
                             project=project,
                             source_page_url=response.request.url,
                             source_file_url=response.urljoin(link_url),
-                            source_scraper=SOURCE_SCRAPER,
                             year=self.target_year,
                         )
 
@@ -384,7 +381,6 @@ class IGEDDSpider(scrapy.Spider):
                                 project=project,
                                 source_page_url=response.request.url,
                                 source_file_url=response.urljoin(file_url),
-                                source_scraper=SOURCE_SCRAPER,
                                 year=self.target_year,
                             )
 
@@ -430,7 +426,6 @@ class IGEDDSpider(scrapy.Spider):
                         category_local=category_local,
                         source_file_url=response.urljoin(doc_link),
                         source_page_url=response.request.url,
-                        source_scraper=SOURCE_SCRAPER,
                         year=self.target_year,
                     )
 
