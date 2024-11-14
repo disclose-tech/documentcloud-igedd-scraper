@@ -13,11 +13,11 @@ AUTHORITY = "IGEDD"
 class IGEDDSpider(scrapy.Spider):
     name = "IGEDD_spider"
 
-    allowed_domains = [
-        "www.igedd.developpement-durable.gouv.fr",
-        "webissimo.developpement-durable.gouv.fr",
-        "webissimo-inter.e2.rie.gouv.fr",
-    ]
+    # allowed_domains = [
+    #     "www.igedd.developpement-durable.gouv.fr",
+    #     "webissimo.developpement-durable.gouv.fr",
+    #     "webissimo-inter.e2.rie.gouv.fr",
+    # ]
 
     start_urls = [
         "https://www.igedd.developpement-durable.gouv.fr/l-autorite-environnementale-r145.html"
