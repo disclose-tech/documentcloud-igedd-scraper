@@ -14,7 +14,7 @@ NEWSPIDER_MODULE = "scraper.spiders"
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-USER_AGENT = "Public Documents Scraper"
+USER_AGENT = "Disclose DocumentCloud Add-On - contact tech@disclose.ngo"
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
