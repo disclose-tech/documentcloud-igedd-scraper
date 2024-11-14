@@ -72,7 +72,7 @@ ITEM_PIPELINES = {
     "scraper.pipelines.ParseDatePipeline": 100,
     "scraper.pipelines.CategoryPipeline": 200,
     "scraper.pipelines.SourceFilenamePipeline": 300,
-    "scraper.pipelines.UnsupportedFiletypePipeline": 400,
+    # "scraper.pipelines.UnsupportedFiletypePipeline": 400,
     "scraper.pipelines.BeautifyPipeline": 500,
     "scraper.pipelines.UploadLimitPipeline": 600,
     "scraper.pipelines.CorrectionsPipeline": 700,
