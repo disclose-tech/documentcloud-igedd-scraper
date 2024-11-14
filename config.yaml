@@ -3,6 +3,10 @@ description: Custom scraper for igedd.developpement-durable.gouv.fr
 instructions: ''
 type: object
 properties:
+  run_name: 
+    title: Run name
+    type: string
+    description: Name to identify this run among others on DocumentCloud's interface
   project:
     title: Project
     type: string
