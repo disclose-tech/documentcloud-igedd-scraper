@@ -14,6 +14,8 @@ from itemadapter import ItemAdapter
 
 from scrapy.exceptions import DropItem
 
+from documentcloud.constants import SUPPORTED_EXTENSIONS
+
 from .corrections import corrections
 
 
@@ -85,6 +87,20 @@ class SourceFilenamePipeline:
         item["source_filename"] = os.path.basename(path)
 
         return item
+
+
+class UnsupportedFiletypePipeline:
+
+    def process_item(self, item, spider):
+
+        filename, file_extension = os.path.splitext(item["source_filename"])
+        file_extension = file_extension.lower()
+
+        if file_extension not in SUPPORTED_EXTENSIONS:
+            # Drop the item
+            raise DropItem("Unsupported filetype")
+        else:
+            return item
 
 
 class BeautifyPipeline:
