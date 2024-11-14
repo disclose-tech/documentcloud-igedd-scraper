@@ -132,4 +132,4 @@ dmypy.json
 __pycache__/
 data.csv
 scrapy.log
-data.csv
+data_*.csv
