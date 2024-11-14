@@ -5,6 +5,8 @@ import re
 import os
 from urllib.parse import urlparse
 import logging
+import json
+
 
 import dateparser
 
@@ -169,37 +171,41 @@ class UploadPipeline:
     """Upload document to DocumentCloud & store event data."""
 
     def open_spider(self, spider):
-
         documentcloud_logger = logging.getLogger("documentcloud")
         documentcloud_logger.setLevel(logging.WARNING)
 
-        if hasattr(spider, "dry_run"):
-            if not spider.dry_run:
-                try:
-                    spider.event_data = spider.load_event_data()
+        if not spider.dry_run:
+            try:
+                spider.logger.info("Loading event data from DocumentCloud...")
+                spider.event_data = spider.load_event_data()
+            except Exception as e:
+                raise Exception("Error loading event data").with_traceback(
+                    e.__traceback__
+                )
+                sys.exit(1)
+        else:
+            # Load from json if present
+            try:
+                spider.logger.info("Loading event data from local JSON file...")
+                with open("event_data.json", "r") as file:
+                    data = json.load(file)
 
-                except Exception as e:
-                    raise Exception("Error loading event data").with_traceback(
-                        e.__traceback__
-                    )
-                    sys.exit(1)
-            else:
+                    spider.event_data = data
+            except:
                 spider.event_data = None
 
-            if spider.event_data is None:
-                spider.event_data = {}
-
-            if spider.dry_run:
-                spider.logger.info(f"Event data not loaded (dry run)")
-            else:
-                spider.logger.info(
-                    f"Loaded event data ({len(spider.event_data)} documents)"
-                )
+        if spider.event_data:
+            spider.logger.info(
+                f"Loaded event data ({len(spider.event_data)} documents)"
+            )
+        else:
+            spider.logger.info("No event data was loaded.")
+            spider.event_data = {}
 
     def process_item(self, item, spider):
 
-        if not spider.dry_run:
-            try:
+        try:
+            if not spider.dry_run:
                 spider.client.documents.upload(
                     item["source_file_url"],
                     project=spider.target_project,
@@ -223,18 +229,18 @@ class UploadPipeline:
                         "year": str(item["year"]),
                     },
                 )
-            except Exception as e:
-                raise Exception("Upload error").with_traceback(e.__traceback__)
+        except Exception as e:
+            raise Exception("Upload error").with_traceback(e.__traceback__)
 
-            else:  # No upload error, add to event_data
-                now = datetime.datetime.now().isoformat()
-                spider.event_data[item["source_file_url"]] = {
-                    "last_modified": item["publication_lastmodified"],
-                    "last_seen": now,
-                    # "run_id": spider.run_id,
-                }
-                if spider.run_id:  # only from the web interface
-                    spider.store_event_data(spider.event_data)
+        else:  # No upload error, add to event_data
+            now = datetime.datetime.now().isoformat()
+            spider.event_data[item["source_file_url"]] = {
+                "last_modified": item["publication_lastmodified"],
+                "last_seen": now,
+                # "run_id": spider.run_id,
+            }
+            if spider.run_id:  # only from the web interface
+                spider.store_event_data(spider.event_data)
 
         return item
 
@@ -246,6 +252,13 @@ class UploadPipeline:
             spider.logger.info(
                 f"Uploaded event data ({len(spider.event_data)} documents)"
             )
+
+        if not spider.run_id:
+            with open("event_data.json", "w") as file:
+                json.dump(spider.event_data, file)
+                spider.logger.info(
+                    f"Saved file event_data.json ({len(spider.event_data)} documents)"
+                )
 
 
 class MailPipeline:
