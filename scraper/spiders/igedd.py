@@ -1,5 +1,5 @@
-import datetime
 import re
+from datetime import datetime, timedelta
 
 import scrapy
 from scrapy.exceptions import CloseSpider
@@ -24,6 +24,23 @@ class IGEDDSpider(scrapy.Spider):
     ]
 
     upload_limit_attained = False
+
+    start_time = datetime.now()
+
+    def check_time_limit(self):
+        """Closes the spider automatically if it reaches a specified duration"""
+
+        # self.logger.info(f"Checking time limit ({self.time_limit} min)")
+
+        if self.time_limit != 0:
+
+            limit = self.time_limit * 60
+            now = datetime.now()
+
+            if timedelta.total_seconds(now - self.start_time) > limit:
+                raise CloseSpider(
+                    f"Closed due to time limit ({self.time_limit} minutes)"
+                )
 
     def check_upload_limit(self):
         """Closes the spider if the upload limit is attained."""
@@ -98,6 +115,9 @@ class IGEDDSpider(scrapy.Spider):
         # https://www.igedd.developpement-durable.gouv.fr/decisions-de-cas-par-cas-sur-des-projets-r506.html
         # https://www.igedd.developpement-durable.gouv.fr/decisions-de-cas-par-cas-sur-des-plans-programmes-r507.html
 
+        self.check_upload_limit()
+        self.check_time_limit()
+
         options = response.css("#contenu .fr-tile__link")
 
         year_link_found = False
@@ -123,6 +143,9 @@ class IGEDDSpider(scrapy.Spider):
             )
 
     def parse_year_selection_page(self, response, category_local):
+
+        self.check_upload_limit()
+        self.check_time_limit()
 
         card_links = response.css("#contenu .fr-card__link")
 
@@ -186,6 +209,9 @@ class IGEDDSpider(scrapy.Spider):
             return no_dossier
 
         # Main fuction
+
+        self.check_upload_limit()
+        self.check_time_limit()
 
         page_title = response.xpath("//title/text()").get().replace(" |  IGEDD", "")
 
@@ -424,6 +450,7 @@ class IGEDDSpider(scrapy.Spider):
         """Gets the headers of a document to extract its publication date (Last-Modified header)."""
 
         self.check_upload_limit()
+        self.check_time_limit()
 
         # Use Last-Modified header as date for the document
         # Note: this is UTC
@@ -431,7 +458,5 @@ class IGEDDSpider(scrapy.Spider):
         last_modified = response.headers.get("Last-Modified").decode("utf-8")
 
         doc_item["publication_lastmodified"] = last_modified
-
-        # dt = datetime.datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z")
 
         yield doc_item

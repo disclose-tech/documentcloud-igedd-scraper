@@ -89,6 +89,9 @@ class DiscloseIGEDDScraper(AddOn):
         )  # current year if not set
 
         self.upload_limit = self.data.get("upload_limit", 0)
+        self.time_limit = self.data.get(
+            "time_limit", 345
+        )  # Default to 5h45 as Github actions have a 6 hour limit
 
         self.upload_event_data = self.data.get("upload_event_data")
 
@@ -120,6 +123,7 @@ class DiscloseIGEDDScraper(AddOn):
             IGEDDSpider,
             target_year=self.target_year,
             upload_limit=self.upload_limit,
+            time_limit=self.time_limit,
             client=self.client,
             target_project=self.project,
             access_level=self.access_level,

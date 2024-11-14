@@ -26,6 +26,11 @@ properties:
     description: 0 for no limit
     type: integer
     default: 0
+  time_limit:
+    title: Maximum number of minutes the scraper should run
+    description: 0 for not limit. Default = 5h45 to prevent hitting the GitHub actions 6h limit.
+    type: integer
+    default: 345
   dry_run:
     title: Dry run
     type: boolean
