@@ -110,15 +110,6 @@ class BeautifyPipeline:
         item["project"] = item["project"].replace(" ", " ").replace("’", "'")
         item["project"] = item["project"].rstrip(".,")
 
-        # remove_at_start = [
-        #     "Absence de nécessité de réaliser une évaluation environnementale de la ",
-        #     # "Cadrage préalable du ",
-        # ]
-        # for start in remove_at_start:
-        #     if item["project"].startswith(start):
-        #         item["project"] = item["project"][len(start) :]
-
-        # item["project"] = item["project"].strip()
         item["project"] = item["project"][0].capitalize() + item["project"][1:]
 
         return item

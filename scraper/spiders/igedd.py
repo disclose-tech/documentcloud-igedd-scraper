@@ -178,7 +178,7 @@ class IGEDDSpider(scrapy.Spider):
                         )
                     else:
                         self.logger.debug(
-                            f"{year_match.group()} not equal to target year ({self.target_year}, type {type(self.target_year)} "
+                            f"{year_match.group()} not equal to target year ({self.target_year})"
                         )
 
     def parse_documents_page(self, response, category_local):
@@ -227,11 +227,8 @@ class IGEDDSpider(scrapy.Spider):
 
                     decision_date_string = decision_date_line.replace("Séance du ", "")
 
-                    # Extract date from the title "Séance du"... TODO if needed
-
                 elif elem.css(".texteencadre-spip"):
 
-                    # print(elem.css(".texteencadre-spip ::text").getall())
                     encadre = elem.css(".texteencadre-spip")
 
                     if encadre.css("a.fr-download__link"):
@@ -315,15 +312,6 @@ class IGEDDSpider(scrapy.Spider):
                             project = project_match.group(1).strip()
                         else:
                             project = "ERROR"
-
-                    # decision_date
-                    # match_decision_date = re.search(
-                    #     r"Décision du (.*) \(\*\)", full_info
-                    # )
-                    # if match_decision_date:
-                    #     decision_date = match_decision_date.group(1).strip()
-                    # else:
-                    #     decision_date = "ERROR"
 
                     # links in boxes (avis, recours, lettres, etc)
                     box_links = encadre.css("a.fr-download__link")
