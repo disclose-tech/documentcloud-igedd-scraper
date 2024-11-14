@@ -7,6 +7,10 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
+from .log import PoliteLogFormatter
+
+LOG_FORMATTER = PoliteLogFormatter
+
 BOT_NAME = "IGEDD Scraper"
 
 SPIDER_MODULES = ["scraper.spiders"]

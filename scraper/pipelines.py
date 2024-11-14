@@ -17,6 +17,7 @@ from scrapy.exceptions import DropItem
 from documentcloud.constants import SUPPORTED_EXTENSIONS
 
 from .corrections import corrections
+from .log import SilentDropItem
 
 
 class ParseDatePipeline:
@@ -139,7 +140,7 @@ class UploadLimitPipeline:
             return item
         else:
             spider.upload_limit_attained = True
-            raise DropItem("Upload limit exceeded.")
+            raise SilentDropItem("Upload limit exceeded.")
 
 
 class CorrectionsPipeline:
@@ -202,10 +203,10 @@ class UploadPipeline:
         else:
             # Load from json if present
             try:
-                spider.logger.info("Loading event data from local JSON file...")
-                with open("event_data.json", "r") as file:
-                    data = json.load(file)
 
+                with open("event_data.json", "r") as file:
+                    spider.logger.info("Loading event data from local JSON file...")
+                    data = json.load(file)
                     spider.event_data = data
             except:
                 spider.event_data = None
