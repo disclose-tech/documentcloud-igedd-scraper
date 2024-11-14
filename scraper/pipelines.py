@@ -7,9 +7,6 @@ from urllib.parse import urlparse
 import logging
 import json
 
-
-import dateparser
-
 from itemadapter import ItemAdapter
 
 from scrapy.exceptions import DropItem
