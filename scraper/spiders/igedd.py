@@ -188,24 +188,24 @@ class IGEDDSpider(scrapy.Spider):
         # Décisions de cas par cas sur des projets: https://www.igedd.developpement-durable.gouv.fr/2024-en-cours-d-examen-et-decisions-rendues-r755.html?lang=fr
         # Les saisines: https://www.igedd.developpement-durable.gouv.fr/les-saisines-de-l-autorite-environnementale-du-a417.html?lang=fr
 
-        def parse_no_dossier(full_info, category_local):
-            """Extracts dossier number from full info"""
+        # def parse_no_dossier(full_info, category_local):
+        #     """Extracts dossier number from full info"""
 
-            if category_local == "Avis rendus":
-                match_no_dossier = re.search(
-                    r"(?:N°dossier Ae\xa0: |N°\xa0|N°)(.*)\n", full_info, re.IGNORECASE
-                )
-            elif category_local.startswith("Décisions de cas par cas"):
-                match_no_dossier = re.search(
-                    r"N° Ae-CERFA :(.*)\n", full_info, re.IGNORECASE
-                )
+        #     if category_local == "Avis rendus":
+        #         match_no_dossier = re.search(
+        #             r"(?:N°dossier Ae\xa0: |N°\xa0|N°)(.*)\n", full_info, re.IGNORECASE
+        #         )
+        #     elif category_local.startswith("Décisions de cas par cas"):
+        #         match_no_dossier = re.search(
+        #             r"N° Ae-CERFA :(.*)\n", full_info, re.IGNORECASE
+        #         )
 
-            if match_no_dossier:
-                no_dossier = match_no_dossier.group(1).strip()
-            else:
-                no_dossier = "ERROR"
+        #     if match_no_dossier:
+        #         no_dossier = match_no_dossier.group(1).strip()
+        #     else:
+        #         no_dossier = "ERROR"
 
-            return no_dossier
+        #     return no_dossier
 
         # Main fuction
 
@@ -248,12 +248,12 @@ class IGEDDSpider(scrapy.Spider):
 
                         project = encadre.css(".fr-download__link ::text").get().strip()
 
-                        no_dossier = parse_no_dossier(full_info, category_local)
+                        # no_dossier = parse_no_dossier(full_info, category_local)
 
                         if "cadrage préalable" in project.lower():
-                            title = f"Cadrage préalable {no_dossier}"
+                            title = f"Cadrage préalable"
                         else:
-                            title = f"Avis {no_dossier}"
+                            title = f"Avis"
 
                         doc_link = encadre.css("a.fr-download__link").attrib["href"]
 
@@ -301,16 +301,7 @@ class IGEDDSpider(scrapy.Spider):
 
                     full_info = "".join(encadre.css("::text").getall())
 
-                    no_dossier = parse_no_dossier(full_info, category_local)
-
-                    # Petitioner
-                    # match_petitioner = re.search(
-                    #     "Pétitionnaire ou maître d’ouvrage\xa0: ?(.*)\n", full_info
-                    # )
-                    # if match_petitioner:
-                    #     petitioner = match_petitioner.group(1).strip()
-                    # else:
-                    #     petitioner = "ERROR"
+                    # no_dossier = parse_no_dossier(full_info, category_local)
 
                     # Project
                     project_link = encadre.css("a.spip_out::text")
@@ -340,7 +331,7 @@ class IGEDDSpider(scrapy.Spider):
                         link_url = link.attrib["href"]
                         link_text = link.css("::text").get().strip()
                         if link_text in ["OUI", "NON"]:
-                            title = f"Décision {no_dossier}"
+                            title = f"Décision ({link_text})"
                         else:
                             title = link_text.strip()
 
@@ -369,7 +360,7 @@ class IGEDDSpider(scrapy.Spider):
                         for index, link in enumerate(simple_links):
                             file_url = link.attrib["href"]
                             if index == 0:
-                                title = f"Formulaire {no_dossier}"
+                                title = f"Formulaire"
                             else:
                                 title = link.css("::text").get().strip()
 
