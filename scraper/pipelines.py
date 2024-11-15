@@ -242,7 +242,7 @@ class UploadPipeline:
             spider.event_data[item["source_file_url"]] = {
                 "last_modified": item["publication_lastmodified"],
                 "last_seen": now,
-                # "run_id": spider.run_id,
+                "target_year": spider.target_year,
             }
             if spider.run_id:  # only from the web interface
                 spider.store_event_data(spider.event_data)
