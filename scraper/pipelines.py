@@ -15,6 +15,7 @@ from documentcloud.constants import SUPPORTED_EXTENSIONS
 
 from .corrections import corrections
 from .log import SilentDropItem
+from .departments import department_from_authority, departments_from_project_name
 
 
 class ParseDatePipeline:
@@ -147,6 +148,28 @@ class CorrectionsPipeline:
         return item
 
 
+class TagDepartmentsPipeline:
+
+    def process_item(self, item, spider):
+
+        authority_department = department_from_authority(item["authority"])
+
+        if authority_department:
+            item["departments_sources"] = ["authority"]
+            item["departments"] = [authority_department]
+
+        else:
+
+            project_departments = departments_from_project_name(item["project"])
+
+            if project_departments:
+
+                item["departments_sources"] = ["regex"]
+                item["departments"] = project_departments
+
+        return item
+
+
 class HandleErrorsPipeline:
     """Pass docs with errors to private"""
 
@@ -209,6 +232,26 @@ class UploadPipeline:
 
     def process_item(self, item, spider):
 
+        data = {
+            "authority": item["authority"],
+            "category": item["category"],
+            "category_local": item["category_local"],
+            "event_data_key": item["source_file_url"],
+            "publication_date": item["publication_date"],
+            "publication_time": item["publication_time"],
+            "publication_datetime": item["publication_datetime"],
+            "source_scraper": f"IGEDD Scraper {spider.target_year}",
+            "source_file_url": item["source_file_url"],
+            "source_filename": item["source_filename"],
+            "source_page_url": item["source_page_url"],
+            "year": str(item["year"]),
+        }
+
+        adapter = ItemAdapter(item)
+        if adapter.get("departments") and adapter.get("departments_sources"):
+            data["departments"] = item["departments"]
+            data["departments_sources"] = item["departments_sources"]
+
         try:
             if not spider.dry_run:
                 spider.client.documents.upload(
@@ -219,20 +262,7 @@ class UploadPipeline:
                     source="www.igedd.developpement-durable.gouv.fr",
                     language="fra",
                     access=item["access"],
-                    data={
-                        "authority": item["authority"],
-                        "category": item["category"],
-                        "category_local": item["category_local"],
-                        "event_data_key": item["source_file_url"],
-                        "publication_date": item["publication_date"],
-                        "publication_time": item["publication_time"],
-                        "publication_datetime": item["publication_datetime"],
-                        "source_scraper": f"IGEDD Scraper {spider.target_year}",
-                        "source_file_url": item["source_file_url"],
-                        "source_filename": item["source_filename"],
-                        "source_page_url": item["source_page_url"],
-                        "year": str(item["year"]),
-                    },
+                    data=data,
                 )
         except Exception as e:
             raise Exception("Upload error").with_traceback(e.__traceback__)

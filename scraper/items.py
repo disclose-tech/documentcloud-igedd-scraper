@@ -26,24 +26,15 @@ class DocumentItem(Item):
     publication_datetime = Field()
 
     publication_timestamp = Field()
-    # publication_year = Field()
-    # publication_month = Field()
-    # publication_day = Field()
     publication_lastmodified = Field()
 
     full_info = Field()
-
-    # decision_date_string = Field()
-    # decision_date_line = Field()
-    # decision_date = Field()
-    # decision_year = Field()
-    # decision_month = Field()
-    # decision_day = Field()
-
-    # petitioner = Field()
 
     headers = Field()
 
     error = Field()
 
     year = Field()
+
+    departments = Field()
+    departments_sources = Field()
