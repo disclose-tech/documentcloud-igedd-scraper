@@ -354,6 +354,9 @@ class MailPipeline:
 
         subject = f"IGEDD Scraper {str(spider.target_year)} (Errors: {len(self.items_with_error)} | New: {len(self.items_ok)}) [{spider.run_name}]"
 
+        if spider.dry_run:
+            subject = "[dry run] " + subject
+
         errors_content = f"ERRORS ({len(self.items_with_error)})\n\n" + "\n\n".join(
             [print_item(item, error=True) for item in self.items_with_error]
         )
