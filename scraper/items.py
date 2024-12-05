@@ -8,7 +8,8 @@ class DocumentItem(Item):
 
     title = Field()
     project = Field()
-    # region = Field()
+    project_id = Field()
+
     source = Field()
     access = Field()
     authority = Field()

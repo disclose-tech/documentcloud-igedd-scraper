@@ -195,6 +195,22 @@ class HandleErrorsPipeline:
         return item
 
 
+class ProjectIDPipeline:
+
+    def process_item(self, item, spider):
+
+        project_name = item["project"]
+        source_page_url = item["source_page_url"]
+        string_to_hash = source_page_url + " " + project_name
+
+        hash_object = hashlib.sha256(string_to_hash.encode())
+        hex_dig = hash_object.hexdigest()
+
+        item["project_id"] = hex_dig
+
+        return item
+
+
 class UploadPipeline:
     """Upload document to DocumentCloud & store event data."""
 
@@ -245,6 +261,7 @@ class UploadPipeline:
             "source_filename": item["source_filename"],
             "source_page_url": item["source_page_url"],
             "year": str(item["year"]),
+            "project_id": item["project_id"],
         }
 
         adapter = ItemAdapter(item)
