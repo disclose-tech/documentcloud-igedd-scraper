@@ -31,8 +31,6 @@ class ParseDatePipeline:
             item["publication_lastmodified"], "%a, %d %b %Y %H:%M:%S %Z"
         )
 
-        item["publication_timestamp"] = publication_dt.isoformat() + "Z"
-
         item["publication_date"] = publication_dt.strftime("%Y-%m-%d")
         item["publication_time"] = publication_dt.strftime("%H:%M:%S UTC")
 
@@ -40,17 +38,9 @@ class ParseDatePipeline:
             item["publication_date"] + " " + item["publication_time"]
         )
 
-        # Decision date
-
-        # if not item["decision_date_string"].lower() == "error":
-        #     decision_dt = dateparser.parse(
-        #         item["decision_date_string"], languages=["fr"]
-        #     )
-        #     if decision_dt:
-        #         item["decision_date"] = decision_dt.strftime("%Y-%m-%d")
-
-        #     else:
-        #         item["decision_date"] = "ERROR"
+        item["publication_datetime_dcformat"] = (
+            publication_dt.isoformat(timespec="microseconds") + "Z"
+        )
 
         return item
 
@@ -277,6 +267,7 @@ class UploadPipeline:
                     project=spider.target_project,
                     title=item["title"],
                     description=item["project"],
+                    publish_at=item["publication_datetime_dcformat"],
                     source="www.igedd.developpement-durable.gouv.fr",
                     language="fra",
                     access=item["access"],
