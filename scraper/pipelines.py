@@ -162,7 +162,7 @@ class TagDepartmentsPipeline:
 
 
 class HandleErrorsPipeline:
-    """Pass docs with errors to private"""
+    """Mark docs with errors."""
 
     def process_item(self, item, spider):
 
@@ -174,15 +174,12 @@ class HandleErrorsPipeline:
             or "error" in item["title"].lower()
         ):
             item["error"] = True
-            item["access"] = "private"
             spider.logger.warn(
                 f"Document with error: {item['title']} on {item['source_page_url']}"
             )
             print(item)
         else:
             item["error"] = False
-            item["access"] = spider.access_level
-
         return item
 
 
@@ -259,6 +256,9 @@ class UploadPipeline:
         if adapter.get("departments") and adapter.get("departments_sources"):
             data["departments"] = item["departments"]
             data["departments_sources"] = item["departments_sources"]
+
+        if item["error"]:
+            data["_tag"] = "hidden"
 
         try:
             if not spider.dry_run:
