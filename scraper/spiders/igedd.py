@@ -75,11 +75,10 @@ class IGEDDSpider(scrapy.Spider):
 
                     current_year_subsec = subsections[0]
                     current_year_subsec_title = current_year_subsec.css("::text").get()
-                    current_year = int(current_year_subsec.css("::text").get())
 
                     archives_subsec = subsections[1]
 
-                    if current_year == int(self.target_year):
+                    if str(self.target_year) in current_year_subsec_title:
                         self.logger.debug(
                             f"Target {current_year_subsec_title} year matches current year"
                         )
@@ -104,6 +103,9 @@ class IGEDDSpider(scrapy.Spider):
                     for subsec in subsections:
                         link_url = subsec.attrib["href"]
                         link_text = subsec.css("::text").get()
+
+                        self.logger.debug(f"Following {link_text} / {link_url}")
+
                         yield response.follow(
                             link_url,
                             callback=self.parse_current_or_archives_page,
@@ -265,13 +267,14 @@ class IGEDDSpider(scrapy.Spider):
                             year=self.target_year,
                         )
 
-                        if not doc_item["source_file_url"] in self.event_data:
-                            yield response.follow(
-                                doc_item["source_file_url"],
-                                method="HEAD",
-                                callback=self.parse_document_headers,
-                                cb_kwargs=dict(doc_item=doc_item),
-                            )
+                        if str(self.target_year) in decision_date_line:
+                            if not doc_item["source_file_url"] in self.event_data:
+                                yield response.follow(
+                                    doc_item["source_file_url"],
+                                    method="HEAD",
+                                    callback=self.parse_document_headers,
+                                    cb_kwargs=dict(doc_item=doc_item),
+                                )
 
         elif category_local.startswith("Décisions de cas par cas"):
 
