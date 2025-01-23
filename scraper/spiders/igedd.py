@@ -78,20 +78,32 @@ class IGEDDSpider(scrapy.Spider):
 
                     archives_subsec = subsections[1]
 
-                    if str(self.target_year) in current_year_subsec_title:
-                        self.logger.debug(
-                            f"Target {current_year_subsec_title} year matches current year"
-                        )
+                    if all(
+                        [str(y) in current_year_subsec_title for y in self.target_years]
+                    ):
+                        # All target years are in the current year link
+                        follow_current = True
+                        follow_archives = False
+
+                    elif any(
+                        [str(y) in current_year_subsec_title for y in self.target_years]
+                    ):
+                        # Some target years are in the current year link
+                        follow_current = True
+                        follow_archives = True
+                    else:
+                        # No target years are in the current year link
+                        follow_current = False
+                        follow_archives = True
+
+                    if follow_current:
                         yield response.follow(
                             current_year_subsec.attrib["href"],
                             callback=self.parse_year_selection_page,
                             cb_kwargs=dict(category_local="Avis rendus"),
                         )
 
-                    else:
-                        self.logger.debug(
-                            f"Target {current_year_subsec_title} does NOT matches target year, following archives link"
-                        )
+                    if follow_archives:
                         yield response.follow(
                             archives_subsec.attrib["href"],
                             callback=self.parse_year_selection_page,
@@ -121,24 +133,36 @@ class IGEDDSpider(scrapy.Spider):
 
         options = response.css("#contenu .fr-tile__link")
 
-        year_link_found = False
-        archive_link = None
+        current_year_link = options[0]
+        current_year_link_text = current_year_link.css("::text").get()
 
-        for opt in options:
-            link_text = opt.css("::text").get()
-            if str(self.target_year) in link_text:  # following curent year link
-                year_link_found = True
-                yield response.follow(
-                    opt.attrib["href"],
-                    callback=self.parse_year_selection_page,
-                    cb_kwargs=dict(category_local=category_local),
-                )
-            elif "archives" in link_text.lower():
-                archive_link = opt
+        archives_link = options[-1]
+        archives_link_text = archives_link.css("::text").get()
 
-        if not year_link_found:  # Following archive link
+        print(
+            f"### CURRENT = '{current_year_link_text}', ARCHIVES = '{archives_link_text}'"
+        )
+
+        if all([str(y) in current_year_link_text for y in self.target_years]):
+            follow_current_year = True
+            follow_archives = False
+        elif any([str(y) in current_year_link_text for y in self.target_years]):
+            follow_current_year = True
+            follow_archives = True
+        else:
+            follow_current_year = False
+            follow_archives = True
+
+        if follow_current_year:
             yield response.follow(
-                archive_link.attrib["href"],
+                current_year_link.attrib["href"],
+                callback=self.parse_documents_page,
+                cb_kwargs=dict(category_local=category_local),
+            )
+
+        if follow_archives:
+            yield response.follow(
+                archives_link.attrib["href"],
                 callback=self.parse_year_selection_page,
                 cb_kwargs=dict(category_local=category_local),
             )
@@ -169,18 +193,12 @@ class IGEDDSpider(scrapy.Spider):
                 year_match = re.search("20\d\d", link_text)
 
                 if year_match:
-                    if int(year_match.group()) == self.target_year:
-                        self.logger.debug(
-                            f"{category_local}, {self.target_year}: matched '{link_text}'"
-                        )
+                    if any([str(y) == year_match.group() for y in self.target_years]):
+                        self.logger.debug(f"matched '{link_text}'")
                         yield response.follow(
                             link.attrib["href"],
                             callback=self.parse_documents_page,
                             cb_kwargs=dict(category_local=category_local),
-                        )
-                    else:
-                        self.logger.debug(
-                            f"{year_match.group()} not equal to target year ({self.target_year})"
                         )
 
     def parse_documents_page(self, response, category_local):
@@ -220,13 +238,16 @@ class IGEDDSpider(scrapy.Spider):
 
         if category_local == "Avis rendus":
 
+            page_title = response.xpath("//title/text()").get()
+            page_year = re.search("20\d\d", page_title)[0]
+
             content_elements = response.css(
                 "#contenu .contenu-article .texte-article > *"
             )
+
             for elem in content_elements:
                 if elem.css("h2"):
                     decision_date_line = elem.css("h2::text").get()
-
                     decision_date_string = decision_date_line.replace("Séance du ", "")
 
                 elif elem.css(".texteencadre-spip"):
@@ -264,11 +285,16 @@ class IGEDDSpider(scrapy.Spider):
                             source_file_url=response.urljoin(doc_link),
                             source_page_url=response.request.url,
                             full_info=full_info,
-                            year=self.target_year,
+                            year=page_year,
                         )
 
-                        if str(self.target_year) in decision_date_line:
-                            if not doc_item["source_file_url"] in self.event_data:
+                        for y in self.target_years:
+                            if (
+                                str(y) in decision_date_line
+                                and not doc_item["source_file_url"] in self.event_data
+                            ):
+                                doc_item["year"] = str(y)
+
                                 yield response.follow(
                                     doc_item["source_file_url"],
                                     method="HEAD",
@@ -277,6 +303,9 @@ class IGEDDSpider(scrapy.Spider):
                                 )
 
         elif category_local.startswith("Décisions de cas par cas"):
+
+            page_title = response.xpath("//title/text()").get()
+            page_year = re.search("20\d\d", page_title)[0]
 
             content_elements = response.css(
                 "#contenu .contenu-article .texte-article > *"
@@ -334,7 +363,7 @@ class IGEDDSpider(scrapy.Spider):
                             project=project,
                             source_page_url=response.request.url,
                             source_file_url=response.urljoin(link_url),
-                            year=self.target_year,
+                            year=page_year,
                         )
 
                         if not doc_item["source_file_url"] in self.event_data:
@@ -363,7 +392,7 @@ class IGEDDSpider(scrapy.Spider):
                                 project=project,
                                 source_page_url=response.request.url,
                                 source_file_url=response.urljoin(file_url),
-                                year=self.target_year,
+                                year=page_year,
                             )
 
                             if not doc_item["source_file_url"] in self.event_data:
@@ -399,29 +428,27 @@ class IGEDDSpider(scrapy.Spider):
 
                 year = int(year_match.group())
 
-                if year == int(self.target_year):
+                for y in self.target_years:
 
-                    doc_item = DocumentItem(
-                        title=f"Accusé de reception - {doc_title}",
-                        project=project,
-                        authority=AUTHORITY,
-                        category_local=category_local,
-                        source_file_url=response.urljoin(doc_link),
-                        source_page_url=response.request.url,
-                        year=self.target_year,
-                    )
+                    if year == y:
 
-                    if not doc_item["source_file_url"] in self.event_data:
-                        yield response.follow(
-                            doc_item["source_file_url"],
-                            method="HEAD",
-                            callback=self.parse_document_headers,
-                            cb_kwargs=dict(doc_item=doc_item),
+                        doc_item = DocumentItem(
+                            title=f"Accusé de reception - {doc_title}",
+                            project=project,
+                            authority=AUTHORITY,
+                            category_local=category_local,
+                            source_file_url=response.urljoin(doc_link),
+                            source_page_url=response.request.url,
+                            year=str(year),
                         )
-                else:
-                    self.logger.debug(
-                        f"Skipped {doc_title}, not matching target_year {self.target_year}"
-                    )
+
+                        if not doc_item["source_file_url"] in self.event_data:
+                            yield response.follow(
+                                doc_item["source_file_url"],
+                                method="HEAD",
+                                callback=self.parse_document_headers,
+                                cb_kwargs=dict(doc_item=doc_item),
+                            )
 
     def parse_document_headers(self, response, doc_item):  # à relire
         """Gets the headers of a document to extract its publication date (Last-Modified header)."""
