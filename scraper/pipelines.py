@@ -244,11 +244,11 @@ class UploadPipeline:
             "publication_date": item["publication_date"],
             "publication_time": item["publication_time"],
             "publication_datetime": item["publication_datetime"],
-            "source_scraper": f"IGEDD Scraper {str(item['year'])}",
+            "source_scraper": "IGEDD Scraper",
+            "source_scraper_year": str(item["year"]),
             "source_file_url": item["source_file_url"],
             "source_filename": item["source_filename"],
             "source_page_url": item["source_page_url"],
-            "year": str(item["year"]),
             "project_id": item["project_id"],
         }
 
