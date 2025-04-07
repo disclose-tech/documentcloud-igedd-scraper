@@ -100,6 +100,7 @@ class BeautifyPipeline:
         # Project
         item["project"] = item["project"].strip()
         item["project"] = item["project"].replace(" ", " ").replace("’", "'")
+        item["project"] = item["project"].replace("–", "-")
         item["project"] = item["project"].rstrip(".,")
 
         item["project"] = item["project"][0].capitalize() + item["project"][1:]

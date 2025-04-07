@@ -290,7 +290,7 @@ class IGEDDSpider(scrapy.Spider):
 
                         for y in self.target_years:
                             if (
-                                str(y) in decision_date_line
+                                str(y) in page_title
                                 and not doc_item["source_file_url"] in self.event_data
                             ):
                                 doc_item["year"] = str(y)
