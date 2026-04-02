@@ -381,7 +381,12 @@ class MailPipeline(SpiderPipeline):
 
             return item_string
 
-        subject = f"IGEDD Scraper {str(self.spider.target_years[0])}-{str(self.spider.target_years[-1])} (Errors: {len(self.items_with_error)} | New: {len(self.items_ok)}) [{self.spider.run_name}]"
+        if len(self.spider.target_years) == 1:
+            year_range_str = str(self.spider.target_years[0])
+        else:
+            year_range_str = f"{str(self.spider.target_years[0])}-{str(self.spider.target_years[-1])}"
+
+        subject = f"IGEDD Scraper {year_range_str} (Errors: {len(self.items_with_error)} | New: {len(self.items_ok)}) [{self.spider.run_name}]"
 
         if self.spider.dry_run:
             subject = "[dry run] " + subject
