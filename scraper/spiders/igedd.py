@@ -139,9 +139,9 @@ class IGEDDSpider(scrapy.Spider):
         archives_link = options[-1]
         archives_link_text = archives_link.css("::text").get()
 
-        print(
-            f"### CURRENT = '{current_year_link_text}', ARCHIVES = '{archives_link_text}'"
-        )
+        # print(
+        #     f"### CURRENT = '{current_year_link_text}', ARCHIVES = '{archives_link_text}'"
+        # )
 
         if all([str(y) in current_year_link_text for y in self.target_years]):
             follow_current_year = True
